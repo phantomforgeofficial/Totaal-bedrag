@@ -107,7 +107,7 @@
     import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut, signInWithRedirect, getRedirectResult } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
     import { getFirestore, doc, getDoc, setDoc, updateDoc, onSnapshot, runTransaction, arrayUnion, arrayRemove, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
 
-    // --- Firebase config (controleer dat deze bij jouw project hoort) ---
+    // --- Firebase config ---
     const firebaseConfig = {
       apiKey: "AIzaSyBAu9cAg4BDojNfNSo-8zW3_XcEe1z89Lw",
       authDomain: "mijn-totaal.firebaseapp.com",
@@ -117,7 +117,6 @@
       appId: "1:222510110794:web:10e3aca61a30f9a6006eb3",
       measurementId: "G-6Y25W4YXDF"
     };
-
     const ADMIN_UID = "BwGO9djUQkUBE3FvUcQlJd5zy6g2";
 
     const app = initializeApp(firebaseConfig);
@@ -156,7 +155,12 @@
       const n=Number(norm);
       return isFinite(n)?Math.round(n*100):null;
     }
-    function normalizeName(s){return String(s||'').normalize('NFD').replace(/\p{Diacritic}+/gu,'').toLowerCase().trim().replace(/\s+/g,' ');}
+    // Compatibel diacritics-strip (geen \p{..} → breekt oude browsers niet)
+    function normalizeName(s){
+      return String(s||'')
+        .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+        .toLowerCase().trim().replace(/\s+/g,' ');
+    }
     function makeFullKey(first,last){return normalizeName(first)+' '+normalizeName(last);}
 
     // --- Auth: login met fallback + debug ---
