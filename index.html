@@ -2,33 +2,35 @@
 <html lang="nl">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Login om totaal bedrag te zien</title>
   <style>
-    :root{--bg:#0b0f19;--card:#121826;--ink:#e7ecf3;--muted:#9aa8b4;--accent:#5b9dff;--good:#18b26b;--warn:#f5a524;--err:#f04438}
+    :root{--bg:#0b0f19;--card:#121826;--ink:#e7ecf3;--muted:#9aa8b4;--accent:#5b9dff;--err:#f04438}
     *{box-sizing:border-box}
-    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Inter,Arial;background:linear-gradient(180deg,#0b0f19,#0e1424 30%,#0b0f19);color:var(--ink);min-height:100svh;display:flex;align-items:center;justify-content:center;padding:24px;position:relative}
-    .card{width:100%;max-width:560px;background:var(--card);border:1px solid rgba(255,255,255,.06);border-radius:20px;box-shadow:0 20px 50px rgba(0,0,0,.35);padding:22px}
-    h1{font-size:22px;margin:0 0 8px} p{color:var(--muted);margin:0 0 18px}
-    .total{display:flex;align-items:baseline;gap:10px;margin:10px 0 14px}
-    .total .amount{font-weight:700;font-size:40px}
-    .chip{font-size:12px;padding:4px 8px;border:1px solid rgba(255,255,255,.12);border-radius:999px;color:var(--muted)}
-    .row{display:flex;gap:10px}
-    input[type="number"], input[type="text"]{flex:1;background:#0b1020;border:1px solid rgba(255,255,255,.1);border-radius:12px;color:var(--ink);padding:14px 14px;font-size:16px;outline:none}
-    input:focus{border-color:var(--accent);box-shadow:0 0 0 4px rgba(91,157,255,.15)}
-    button{appearance:none;border:0;border-radius:12px;padding:14px 16px;font-weight:700;font-size:16px;cursor:pointer}
-    .primary{background:var(--accent);color:#06122b}
-    .ghost{background:transparent;border:1px solid rgba(255,255,255,.12);color:var(--ink)}
-    .danger{background:transparent;border:1px solid var(--err);color:var(--err)}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial;background:linear-gradient(180deg,#0b0f19,#0e1424 30%,#0b0f19);color:var(--ink);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;position:relative}
+    .card{width:100%;max-width:640px;background:var(--card);border:1px solid rgba(255,255,255,.08);border-radius:18px;box-shadow:0 20px 50px rgba(0,0,0,.35);padding:22px}
+    h1{font-size:22px;margin:0 0 8px}
+    p{color:var(--muted);margin:0 0 16px}
+    .row{display:flex;gap:10px;align-items:center}
     .stack{display:flex;flex-direction:column;gap:10px}
-    .divider{height:1px;background:rgba(255,255,255,.06);margin:14px 0}
-    .status{min-height:22px;color:var(--muted);font-size:14px}
-    .hidden{display:none !important}
-    .admin-only{border:1px dashed rgba(255,255,255,.15);padding:12px;border-radius:12px}
-    #userInfo{position:absolute;top:16px;right:20px;display:flex;gap:10px;align-items:center}
+    input,select,button{font-size:16px;border-radius:12px}
+    input,select{width:100%;background:#0b1020;border:1px solid rgba(255,255,255,.12);color:var(--ink);padding:12px}
+    button{border:0;padding:12px 14px;cursor:pointer}
+    .primary{background:var(--accent);color:#06122b}
+    .ghost{background:transparent;border:1px solid rgba(255,255,255,.15);color:var(--ink)}
+    .danger{background:transparent;border:1px solid var(--err);color:var(--err)}
+    .chip{font-size:12px;padding:4px 8px;border:1px solid rgba(255,255,255,.12);border-radius:999px;color:var(--muted)}
+    .total{display:flex;align-items:baseline;gap:10px;margin:6px 0 10px}
+    .amount{font-weight:700;font-size:38px}
+    .divider{height:1px;background:rgba(255,255,255,.08);margin:14px 0}
+    .hidden{display:none!important}
+    #userInfo{position:absolute;top:14px;right:18px;display:flex;gap:10px;align-items:center}
+    .list-row{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(255,255,255,.08);padding:8px 0}
+    code{background:#0b1020;border:1px solid rgba(255,255,255,.1);padding:2px 6px;border-radius:8px}
   </style>
 </head>
 <body>
+  <!-- Rechtsboven: user + uitloggen -->
   <div id="userInfo" class="hidden">
     <div class="chip" id="who"></div>
     <button id="signOut" class="ghost">Uitloggen</button>
@@ -38,25 +40,52 @@
     <h1 id="pageTitle">Login om totaal bedrag te zien</h1>
     <p id="adminText" class="hidden">Vul een bedrag in. Alleen jij kunt het totaal wijzigen; iedereen kan het totaal bekijken.</p>
 
-    <div class="total hidden" id="totalSection">
+    <!-- Totaal (verborgen tot login) -->
+    <div id="totalSection" class="total hidden">
       <div class="chip">Huidig totaal</div>
-      <div class="amount" id="totalAmount">—</div>
+      <div id="totalAmount" class="amount">—</div>
     </div>
 
+    <!-- Login -->
     <div id="loginSection" class="row">
-      <button id="signIn" class="ghost">Inloggen met Google</button>
+      <button id="signIn" class="primary">Inloggen met Google</button>
+    </div>
+
+    <div id="noAccess" class="hidden">
+      <p>Je hebt (nog) geen rekening. Neem contact op met de beheerder.</p>
+    </div>
+
+    <!-- Editor UI -->
+    <div id="balanceSection" class="hidden">
+      <div id="editorControls" class="stack hidden">
+        <label for="amount">Bedrag toevoegen (bijv. 12,34)</label>
+        <div class="row">
+          <input id="amount" type="text" inputmode="decimal" placeholder="0,00" />
+          <button id="add" class="primary">Toevoegen</button>
+          <button id="reset" class="danger">Resetten</button>
+        </div>
+      </div>
     </div>
 
     <div class="divider"></div>
 
-    <div id="adminPanel" class="stack admin-only hidden">
-      <label for="amountInput">Bedrag toevoegen (bijv. 12,34)</label>
-      <div class="row">
-        <input id="amountInput" type="text" inputmode="decimal" placeholder="0,00" />
-        <button id="addBtn" class="primary">Toevoegen</button>
-      </div>
-      <div class="row">
-        <button id="resetBtn" class="danger">Totaal resetten naar 0</button>
+    <!-- Admin -->
+    <div id="adminPanel" class="hidden">
+      <h2>Beheer gebruikers</h2>
+      <div class="stack">
+        <div class="row">
+          <input id="newEmailOrUid" type="text" placeholder="E-mail of UID" />
+          <select id="newRole">
+            <option value="viewer">Viewer</option>
+            <option value="editor">Editor</option>
+          </select>
+          <button id="addUser" class="primary">Toevoegen</button>
+        </div>
+        <p class="chip">Tip: voer een e-mail in om vooraf goed te keuren; bij eerste login koppelen we automatisch de UID.</p>
+        <h3>Toegestane UIDs</h3>
+        <div id="userList"></div>
+        <h3>Vooraf goedgekeurde e-mails</h3>
+        <div id="emailList"></div>
       </div>
     </div>
 
@@ -66,9 +95,9 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
     import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
-    import { signInWithRedirect, getRedirectResult } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
-    import { getFirestore, doc, onSnapshot, runTransaction, setDoc } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
+    import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, getDocs, onSnapshot, runTransaction } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
 
+    // ⬇️ VUL IN
     const firebaseConfig = {
       apiKey: "AIzaSyBAu9cAg4BDojNfNSo-8zW3_XcEe1z89Lw",
       authDomain: "mijn-totaal.firebaseapp.com",
@@ -78,25 +107,31 @@
       appId: "1:222510110794:web:10e3aca61a30f9a6006eb3",
       measurementId: "G-6Y25W4YXDF"
     };
-
     const ADMIN_UID = "BwGO9djUQkUBE3FvUcQlJd5zy6g2";
 
+    // ——————————————————————————————————
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    const el = (id)=>document.getElementById(id);
+    const el = id => document.getElementById(id);
     const fmt = new Intl.NumberFormat('nl-NL', { style:'currency', currency:'EUR' });
 
-    const totalRef = doc(db, 'totals', 'main');
+    // UI refs
+    const signInBtn = el('signIn'), signOutBtn = el('signOut'), who = el('who'),
+          userInfo = el('userInfo'), loginSection = el('loginSection'),
+          pageTitle = el('pageTitle'), adminText = el('adminText'),
+          totalSection = el('totalSection'), totalAmount = el('totalAmount'),
+          balanceSection = el('balanceSection'), editorControls = el('editorControls'),
+          noAccess = el('noAccess'), statusEl = el('status'),
+          newEmailOrUid = el('newEmailOrUid'), newRole = el('newRole'),
+          addUserBtn = el('addUser'), userList = el('userList'), emailList = el('emailList');
 
-    onSnapshot(totalRef, snap => {
-      const data = snap.data();
-      const cents = data?.cents ?? 0;
-      el('totalAmount').textContent = fmt.format(cents/100);
-    });
+    const provider = new GoogleAuthProvider();
+    let currentUser = null;
+    let role = null;
 
-    function setStatus(msg){ el('status').textContent = msg || ''; }
+    function setStatus(s=''){ statusEl.textContent = s; }
 
     function parseEuro(input){
       const s = String(input).trim().replace(/\s+/g,'');
@@ -107,81 +142,170 @@
       return Math.round(val * 100);
     }
 
-    const signInBtn = el('signIn');
-    const signOutBtn = el('signOut');
-    const who = el('who');
-    const adminPanel = el('adminPanel');
-    const adminText = el('adminText');
-    const totalSection = el('totalSection');
-    const pageTitle = el('pageTitle');
-    const userInfo = el('userInfo');
-    const loginSection = el('loginSection');
+    // Login/Logout
+    signInBtn.onclick = async () => {
+      try { await signInWithPopup(auth, provider); }
+      catch(e){ alert('Inloggen mislukt: ' + e.message); }
+    };
+    signOutBtn.onclick = () => signOut(auth);
 
-    signInBtn.addEventListener('click', async ()=>{
-      try{
-        const provider = new GoogleAuthProvider();
-        await signInWithPopup(auth, provider);
-      }catch(e){
-        console.warn('Popup sign-in mislukte, probeer redirect...', e.code, e.message);
-        // Fallback naar redirect op popup-blocked of vergelijkbare fouten
-        try{
-          const provider = new GoogleAuthProvider();
-          await signInWithRedirect(auth, provider);
-        }catch(err){
-          alert('Inloggen mislukt: ' + err.message);
-        }
-      }
-    });
-
-    signOutBtn.addEventListener('click', ()=> signOut(auth));
-
-    // Verwerk een eventuele redirect-result bij opstart
-    try { await getRedirectResult(auth); } catch(e) { console.warn('Redirect result error', e); }
-
+    // Auth observer
     onAuthStateChanged(auth, async (user)=>{
-      if(user){
-        who.textContent = user.email || user.uid;
-        loginSection.classList.add('hidden');
-        userInfo.classList.remove('hidden');
-        totalSection.classList.remove('hidden');
-        pageTitle.textContent = 'Totaal Bedrag';
-        if(user.uid === ADMIN_UID){
-          adminPanel.classList.remove('hidden');
-          adminText.classList.remove('hidden');
-        } else {
-          adminPanel.classList.add('hidden');
-          adminText.classList.add('hidden');
-        }
-      } else {
+      if(!user){
+        pageTitle.textContent = 'Login om totaal bedrag te zien';
         userInfo.classList.add('hidden');
         loginSection.classList.remove('hidden');
-        adminPanel.classList.add('hidden');
         adminText.classList.add('hidden');
         totalSection.classList.add('hidden');
-        pageTitle.textContent = 'Login om totaal bedrag te zien';
+        balanceSection.classList.add('hidden');
+        noAccess.classList.add('hidden');
+        return;
       }
+
+      currentUser = user;
+      who.textContent = user.email || user.uid;
+      userInfo.classList.remove('hidden');
+      loginSection.classList.add('hidden');
+      pageTitle.textContent = 'Totaal Bedrag';
+
+      const isAdmin = (user.uid === ADMIN_UID);
+      adminText.classList.toggle('hidden', !isAdmin);
+      if(isAdmin){
+        document.getElementById('adminPanel').classList.remove('hidden');
+        await loadAdminLists();
+      } else {
+        document.getElementById('adminPanel').classList.add('hidden');
+      }
+
+      // Toegangscontrole:
+      // 1) allowedUsers/<uid>
+      const allowRef = doc(db, 'allowedUsers', user.uid);
+      const allowSnap = await getDoc(allowRef);
+
+      if(allowSnap.exists()){
+        role = allowSnap.data().role || 'viewer';
+      }else{
+        // 2) allowedEmails/<email> ⇒ promote naar allowedUsers/<uid>
+        if(user.email){
+          const emailRef = doc(db, 'allowedEmails', user.email);
+          const emailSnap = await getDoc(emailRef);
+          if(emailSnap.exists()){
+            role = emailSnap.data().role || 'viewer';
+            await setDoc(allowRef, { role, email: user.email }, { merge:true });
+          }
+        }
+      }
+
+      if(isAdmin){
+        role = 'admin';
+      }
+
+      if(!role){
+        // geen toegang
+        noAccess.classList.remove('hidden');
+        totalSection.classList.add('hidden');
+        balanceSection.classList.add('hidden');
+        return;
+      }
+
+      noAccess.classList.add('hidden');
+      totalSection.classList.remove('hidden');
+      balanceSection.classList.remove('hidden');
+      editorControls.classList.toggle('hidden', !(role==='editor' || role==='admin'));
+
+      // Realtime saldo van eigen rekening
+      const totalRef = doc(db, 'totals', user.uid);
+      onSnapshot(totalRef, snap=>{
+        const cents = snap.exists() ? (snap.data().cents||0) : 0;
+        totalAmount.textContent = fmt.format(cents/100);
+      });
+
+      // Editor-acties
+      el('add').onclick = async ()=>{
+        const centsToAdd = parseEuro(el('amount').value);
+        if(centsToAdd===null) return setStatus('Voer een geldig bedrag in (bijv. 12,34)');
+        try{
+          await runTransaction(db, async (tx)=>{
+            const s = await tx.get(totalRef);
+            const cur = s.exists() ? (s.data().cents||0) : 0;
+            tx.set(totalRef, { cents: cur + centsToAdd }, { merge:true });
+          });
+          el('amount').value=''; setStatus('Toegevoegd.');
+        }catch(e){ setStatus('Kon niet toevoegen: '+e.message); }
+      };
+
+      el('reset').onclick = async ()=>{
+        try{ await setDoc(totalRef, { cents: 0 }, { merge:true }); setStatus('Totaal gereset.'); }
+        catch(e){ setStatus('Kon niet resetten: '+e.message); }
+      };
     });
 
-    el('addBtn').addEventListener('click', async ()=>{
-      setStatus('');
-      const centsToAdd = parseEuro(el('amountInput').value);
-      if(centsToAdd === null){ setStatus('Voer een geldig bedrag in, bijv. 12,34'); return; }
-      try{
-        await runTransaction(db, async (tx)=>{
-          const snap = await tx.get(totalRef);
-          const current = snap.exists() ? (snap.data().cents||0) : 0;
-          tx.set(totalRef, { cents: current + centsToAdd }, { merge:true });
-        });
-        el('amountInput').value='';
-        setStatus('Toegevoegd.');
-      }catch(e){ setStatus('Kon niet toevoegen: ' + e.message); }
-    });
+    // ——— Admin: lists & beheer ———
+    async function loadAdminLists(){
+      // allowedUsers (UIDs)
+      userList.innerHTML='';
+      const usersSnap = await getDocs(collection(db,'allowedUsers'));
+      usersSnap.forEach(d=>{
+        const data=d.data();
+        const r=data.role||'viewer', email=data.email||'(onbekend)';
+        const row=document.createElement('div'); row.className='list-row';
+        row.innerHTML = `<div>${email} — <code>${d.id}</code> (${r})</div>
+          <div>
+            <button class="ghost" data-uid="${d.id}" data-role="${r}" data-action="toggleRole">Wijzig rol</button>
+            <button class="danger" data-uid="${d.id}" data-action="delUser">Verwijder</button>
+          </div>`;
+        userList.appendChild(row);
+      });
 
-    el('resetBtn').addEventListener('click', async ()=>{
-      try{
-        await setDoc(totalRef, { cents: 0 }, { merge:true });
-        setStatus('Totaal gereset.');
-      }catch(e){ setStatus('Kon niet resetten: ' + e.message); }
+      // allowedEmails (pre-approvals)
+      emailList.innerHTML='';
+      const emailsSnap = await getDocs(collection(db,'allowedEmails'));
+      emailsSnap.forEach(d=>{
+        const data=d.data(); const r=data.role||'viewer';
+        const row=document.createElement('div'); row.className='list-row';
+        row.innerHTML = `<div>${d.id} (${r})</div>
+          <div>
+            <button class="ghost" data-email="${d.id}" data-role="${r}" data-action="toggleEmailRole">Wijzig rol</button>
+            <button class="danger" data-email="${d.id}" data-action="delEmail">Verwijder</button>
+          </div>`;
+        emailList.appendChild(row);
+      });
+    }
+
+    addUserBtn.onclick = async ()=>{
+      const value = newEmailOrUid.value.trim();
+      const r = newRole.value;
+      if(!value) return alert('Voer e-mail of UID in');
+      if(value.includes('@')){
+        await setDoc(doc(db,'allowedEmails',value), { role: r }, { merge:true });
+      }else{
+        await setDoc(doc(db,'allowedUsers',value), { role: r }, { merge:true });
+      }
+      newEmailOrUid.value='';
+      await loadAdminLists();
+    };
+
+    document.addEventListener('click', async (e)=>{
+      const btn = e.target.closest('button'); if(!btn) return;
+      const act = btn.dataset.action;
+      if(act==='toggleRole'){
+        const uid=btn.dataset.uid, cur=btn.dataset.role, nxt=cur==='viewer'?'editor':'viewer';
+        await setDoc(doc(db,'allowedUsers',uid), { role: nxt }, { merge:true });
+        await loadAdminLists();
+      }
+      if(act==='delUser'){
+        await deleteDoc(doc(db,'allowedUsers',btn.dataset.uid));
+        await loadAdminLists();
+      }
+      if(act==='toggleEmailRole'){
+        const email=btn.dataset.email, cur=btn.dataset.role, nxt=cur==='viewer'?'editor':'viewer';
+        await setDoc(doc(db,'allowedEmails',email), { role: nxt }, { merge:true });
+        await loadAdminLists();
+      }
+      if(act==='delEmail'){
+        await deleteDoc(doc(db,'allowedEmails',btn.dataset.email));
+        await loadAdminLists();
+      }
     });
   </script>
 </body>
