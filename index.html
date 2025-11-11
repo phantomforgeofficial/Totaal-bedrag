@@ -297,7 +297,20 @@
         });
         profileSection.classList.add('hidden');
         await loadAccessibleAccounts();
-      }catch(e){ alert(e.message || 'Kon profiel niet opslaan.'); }
+      }catch(e){
+        const code = (e && e.code) ? String(e.code) : '';
+        const msg  = (e && e.message) ? String(e.message) : '';
+        let nice = '';
+        if (msg.includes('Deze naam is al in gebruik')) {
+          nice = msg; // unieke naam al bezet
+        } else if (code.includes('permission-denied') || msg.toLowerCase().includes('permission')) {
+          nice = 'Opslaan geblokkeerd door Firestore Rules. Publiceer de nieuwste regels: nameIndex read/write en profiles write met nameIndex‑check.';
+        } else {
+          nice = msg || 'Kon profiel niet opslaan.';
+        }
+        setStatus(nice);
+        alert(nice);
+      }
     };
 
     // ===== Labels op basis van profiles =====
@@ -356,10 +369,11 @@
       // Als account gemarkeerd is als verwijderd: verberg
       const snap = await getDoc(ref); if(snap.exists() && snap.data().deleted===true){ totalSection.classList.add('hidden'); editorControls.classList.add('hidden'); return; }
 
-      unsubscribeTotal = onSnapshot(ref, s=>{
-        const d=s.data()||{cents:0};
-        if(d.deleted===true){ totalSection.classList.add('hidden'); editorControls.classList.add('hidden'); return; }
-        totalAmount.textContent = fmt.format((d.cents||0)/100);
+      unsubscribeTotal = onSnapshot(ref, s=>{$1}, (err)=>{
+        const code = err?.code || '';
+        if (String(code).includes('permission-denied')) {
+          setStatus('Geen leesrechten (Firestore Rules). Publiceer regels en controleer toegang.');
+        }
       });
       totalSection.classList.remove('hidden');
 
