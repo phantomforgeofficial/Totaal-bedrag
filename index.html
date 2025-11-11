@@ -150,7 +150,7 @@
     let currentUser=null, selectedAccountId=null, unsubscribeTotal=null;
     let isAdmin=false; let currentRole=null;
     const provider=new GoogleAuthProvider();
-    try{ provider.setCustomParameters({ prompt: 'select_account' }); }catch(_){}}
+    try { provider.setCustomParameters({ prompt: 'select_account' }); } catch(_) {}
 
     function setStatus(s=''){statusEl.textContent=s;}
 
