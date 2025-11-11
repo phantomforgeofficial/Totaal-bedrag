@@ -2,12 +2,12 @@
 <html lang="nl">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Login om totaal bedrag te zien</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Totaal Bedrag – Gedeelde Rekeningen</title>
   <style>
     :root{--bg:#0b0f19;--card:#121826;--ink:#e7ecf3;--muted:#9aa8b4;--accent:#5b9dff;--err:#f04438}
     *{box-sizing:border-box}
-    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Inter,Arial;background:linear-gradient(180deg,#0b0f19,#0e1424 30%,#0b0f19);color:var(--ink);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;position:relative}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial;background:linear-gradient(180deg,#0b0f19,#0e1424 30%,#0b0f19);color:var(--ink);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;position:relative}
     .card{width:100%;max-width:760px;background:var(--card);border:1px solid rgba(255,255,255,.08);border-radius:18px;box-shadow:0 20px 50px rgba(0,0,0,.35);padding:22px}
     h1{font-size:22px;margin:0 0 8px}
     p{color:var(--muted);margin:0 0 16px}
@@ -30,7 +30,6 @@
   </style>
 </head>
 <body>
-  <!-- Rechtsboven: user + uitloggen -->
   <div id="userInfo" class="hidden">
     <div class="chip" id="who"></div>
     <button id="signOut" class="ghost">Uitloggen</button>
@@ -38,22 +37,19 @@
 
   <div class="card">
     <h1 id="pageTitle">Login om totaal bedrag te zien</h1>
-    <p id="adminText" class="hidden">Alleen jij kunt het totaal wijzigen; anderen zien alleen wat jij toekent.</p>
+    <p id="adminText" class="hidden">Alleen jij kunt rekeningen beheren; anderen zien wat jij toewijst.</p>
 
-    <!-- Account selector (zichtbaar na login) -->
     <div id="accountPicker" class="row hidden">
       <label for="accountSelect" class="chip">Rekening</label>
       <select id="accountSelect"></select>
       <button id="refreshAccounts" class="ghost">Vernieuwen</button>
     </div>
 
-    <!-- Totaal (verborgen tot login) -->
     <div id="totalSection" class="total hidden">
       <div class="chip">Huidig totaal</div>
       <div id="totalAmount" class="amount">—</div>
     </div>
 
-    <!-- Editor UI voor geselecteerde rekening -->
     <div id="editorControls" class="stack hidden">
       <label for="amount">Bedrag toevoegen (bijv. 12,34)</label>
       <div class="row">
@@ -63,7 +59,6 @@
       </div>
     </div>
 
-    <!-- Login -->
     <div id="loginSection" class="row">
       <button id="signIn" class="primary">Inloggen met Google</button>
     </div>
@@ -74,27 +69,25 @@
 
     <div class="divider"></div>
 
-    <!-- Admin beheer: per-rekening rechten -->
     <div id="adminPanel" class="hidden">
-      <h2>Beheer rekeningen & rechten</h2>
+      <h2>Beheer rekeningen & rechten (UID of e-mail)</h2>
       <div class="stack">
         <div class="row">
           <input id="adminAccountUid" type="text" placeholder="Rekening-ID (UID eigenaar)" />
-          <button id="createAccountDoc" class="ghost">Maak/initialiseer rekening</button>
+          <button id="createAccountDoc" class="ghost">Maak rekening</button>
         </div>
         <div class="row">
-          <input id="viewerUid" type="text" placeholder="Viewer UID (alleen lezen)" />
+          <input id="viewerUid" type="text" placeholder="Viewer UID of e-mail" />
           <button id="addViewer" class="ghost">Viewer toevoegen</button>
-          <input id="editorUid" type="text" placeholder="Editor UID (mag bewerken)" />
+          <input id="editorUid" type="text" placeholder="Editor UID of e-mail" />
           <button id="addEditor" class="ghost">Editor toevoegen</button>
         </div>
         <div class="row">
-          <input id="removeUid" type="text" placeholder="UID verwijderen (uit viewers/editors)" />
+          <input id="removeUid" type="text" placeholder="UID/e-mail verwijderen" />
           <button id="removeAccess" class="danger">Toegang verwijderen</button>
         </div>
-        <p class="chip">Tip: viewers kunnen meerdere rekeningen zien als jij ze hier toevoegt aan die rekeningen.</p>
         <div class="divider"></div>
-        <h3>Huidige rechten voor rekening: <code id="rightsAccount">—</code></h3>
+        <h3>Rechten voor rekening: <code id="rightsAccount">—</code></h3>
         <div id="rightsList"></div>
       </div>
     </div>
@@ -107,7 +100,6 @@
     import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
     import { getFirestore, doc, getDoc, setDoc, updateDoc, onSnapshot, runTransaction, arrayUnion, arrayRemove, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
 
-    // \u26a1\ufe0f Projectconfig (laat zoals eerder ingevuld)
     const firebaseConfig = {
       apiKey: "AIzaSyBAu9cAg4BDojNfNSo-8zW3_XcEe1z89Lw",
       authDomain: "mijn-totaal.firebaseapp.com",
@@ -122,214 +114,98 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
+    const el = id=>document.getElementById(id);
+    const fmt = new Intl.NumberFormat('nl-NL',{style:'currency',currency:'EUR'});
 
-    const el = id => document.getElementById(id);
-    const fmt = new Intl.NumberFormat('nl-NL', { style:'currency', currency:'EUR' });
+    const signInBtn=el('signIn'), signOutBtn=el('signOut'), who=el('who'), userInfo=el('userInfo'),
+          loginSection=el('loginSection'), adminText=el('adminText'),
+          totalSection=el('totalSection'), totalAmount=el('totalAmount'),
+          editorControls=el('editorControls'), amountInput=el('amount'),
+          noAccess=el('noAccess'), accountPicker=el('accountPicker'),
+          accountSelect=el('accountSelect'), refreshBtn=el('refreshAccounts'),
+          adminPanel=el('adminPanel'), adminAccountUid=el('adminAccountUid'),
+          createAccBtn=el('createAccountDoc'), viewerUid=el('viewerUid'),
+          addViewerBtn=el('addViewer'), editorUid=el('editorUid'),
+          addEditorBtn=el('addEditor'), removeUid=el('removeUid'),
+          removeAccessBtn=el('removeAccess'), rightsList=el('rightsList'),
+          rightsAccount=el('rightsAccount'), statusEl=el('status');
 
-    // UI refs
-    const signInBtn = el('signIn'), signOutBtn = el('signOut'), who = el('who'), userInfo = el('userInfo');
-    const loginSection = el('loginSection'), pageTitle = el('pageTitle'), adminText = el('adminText');
-    const totalSection = el('totalSection'), totalAmount = el('totalAmount');
-    const editorControls = el('editorControls'), amountInput = el('amount');
-    const noAccess = el('noAccess'), statusEl = el('status');
-    const accountPicker = el('accountPicker'), accountSelect = el('accountSelect'), refreshAccountsBtn = el('refreshAccounts');
-    const adminPanel = el('adminPanel');
-    const adminAccountUid = el('adminAccountUid'), createAccountDocBtn = el('createAccountDoc');
-    const viewerUid = el('viewerUid'), editorUid = el('editorUid');
-    const addViewerBtn = el('addViewer'), addEditorBtn = el('addEditor');
-    const removeUid = el('removeUid'), removeAccessBtn = el('removeAccess');
-    const rightsAccount = el('rightsAccount'), rightsList = el('rightsList');
-
-    let currentUser = null;
-    let selectedAccountId = null;
-    let unsubscribeTotal = null;
-
-    function setStatus(s=''){ statusEl.textContent = s; }
+    let currentUser=null, selectedAccountId=null, unsubscribeTotal=null;
+    const provider=new GoogleAuthProvider();
+    function setStatus(s=''){statusEl.textContent=s;}
 
     function parseEuro(input){
-      const s = String(input).trim().replace(/\s+/g,'');
-      if(!s) return null;
-      const norm = s.replace(/\./g,'').replace(',', '.');
-      const val = Number(norm);
-      if(!isFinite(val)) return null;
-      return Math.round(val * 100);
+      const s=String(input).trim().replace(/\\s+/g,'');
+      if(!s)return null;
+      const norm=s.replace(/\\./g,'').replace(',','.');
+      const val=Number(norm);
+      return isFinite(val)?Math.round(val*100):null;
     }
 
-    // Auth
-    signInBtn.onclick = async ()=>{
-      try{ await signInWithPopup(auth, new GoogleAuthProvider()); }
-      catch(e){ alert('Inloggen mislukt: '+e.message); }
-    };
-    signOutBtn.onclick = ()=> signOut(auth);
+    signInBtn.onclick=async()=>{try{await signInWithPopup(auth,provider);}catch(e){alert('Inloggen mislukt: '+e.message);}};
+    signOutBtn.onclick=()=>signOut(auth);
 
-    onAuthStateChanged(auth, async (user)=>{
-      if(!user){
-        pageTitle.textContent = 'Login om totaal bedrag te zien';
-        userInfo.classList.add('hidden');
-        loginSection.classList.remove('hidden');
-        adminText.classList.add('hidden');
-        totalSection.classList.add('hidden');
-        editorControls.classList.add('hidden');
-        accountPicker.classList.add('hidden');
-        noAccess.classList.add('hidden');
-        if(unsubscribeTotal){ unsubscribeTotal(); unsubscribeTotal=null; }
-        return;
-      }
-      currentUser = user;
-      who.textContent = user.email || user.uid;
-      userInfo.classList.remove('hidden');
-      loginSection.classList.add('hidden');
-      pageTitle.textContent = 'Totaal Bedrag';
-
-      const isAdmin = (user.uid === ADMIN_UID);
-      adminText.classList.toggle('hidden', !isAdmin);
-      adminPanel.classList.toggle('hidden', !isAdmin);
-
-      // Laad toegankelijke rekeningen voor deze gebruiker
+    onAuthStateChanged(auth,async(user)=>{
+      if(!user){userInfo.classList.add('hidden');loginSection.classList.remove('hidden');totalSection.classList.add('hidden');editorControls.classList.add('hidden');accountPicker.classList.add('hidden');noAccess.classList.add('hidden');if(unsubscribeTotal){unsubscribeTotal();unsubscribeTotal=null;}return;}
+      currentUser=user;who.textContent=user.email||user.uid;userInfo.classList.remove('hidden');loginSection.classList.add('hidden');
+      const isAdmin=(user.uid===ADMIN_UID);adminPanel.classList.toggle('hidden',!isAdmin);
       await loadAccessibleAccounts();
     });
 
     async function ensureAccountDoc(uid){
-      const ref = doc(db,'totals',uid);
-      const snap = await getDoc(ref);
-      if(!snap.exists()){
-        await setDoc(ref, { cents: 0, viewers: [], editors: [] }, { merge:true });
-      } else {
-        const d=snap.data();
-        if(!Array.isArray(d.viewers) || !Array.isArray(d.editors)){
-          await setDoc(ref, { viewers: d.viewers||[], editors: d.editors||[] }, { merge:true });
-        }
+      const ref=doc(db,'totals',uid);
+      const s=await getDoc(ref);
+      if(!s.exists()){
+        await setDoc(ref,{cents:0,viewers:[],editors:[],viewerEmails:[],editorEmails:[]});
       }
       return ref;
     }
 
     async function loadAccessibleAccounts(){
       accountSelect.innerHTML='';
-      const uid = currentUser.uid;
-
-      // Eigen rekening is altijd optioneel aanwezig (initialiseer indien niet bestaan)
+      const uid=currentUser.uid;const email=currentUser.email;
       await ensureAccountDoc(uid);
-      const opts = new Map();
-      opts.set(uid, `${currentUser.email||'ik'} (eigen)`);
-
-      // Rekeningen waar ik viewer ben
-      const qView = query(collection(db,'totals'), where('viewers','array-contains', uid));
-      const qViewSnap = await getDocs(qView);
-      qViewSnap.forEach(d=> opts.set(d.id, `${d.id} (viewer)`));
-      // Rekeningen waar ik editor ben
-      const qEdit = query(collection(db,'totals'), where('editors','array-contains', uid));
-      const qEditSnap = await getDocs(qEdit);
-      qEditSnap.forEach(d=> opts.set(d.id, `${d.id} (editor)`));
-
-      // Admin kan alles zien → simpele lijst van alle accounts
-      if(currentUser.uid === ADMIN_UID){
-        const all = await getDocs(collection(db,'totals'));
-        all.forEach(d=>{ if(!opts.has(d.id)) opts.set(d.id, `${d.id}`); });
-      }
-
-      // Vul select
-      for(const [id,label] of opts.entries()){
-        const o = document.createElement('option'); o.value=id; o.textContent=label; accountSelect.appendChild(o);
-      }
-
-      accountPicker.classList.remove('hidden');
-      // standaard selecteer eigen uid
-      selectAccount(uid);
+      const opts=new Map();opts.set(uid,`${email||'ik'} (eigen)`);
+      const qv=query(collection(db,'totals'),where('viewers','array-contains',uid));
+      const qvE=query(collection(db,'totals'),where('viewerEmails','array-contains',email));
+      const qe=query(collection(db,'totals'),where('editors','array-contains',uid));
+      const qeE=query(collection(db,'totals'),where('editorEmails','array-contains',email));
+      for(const q of [qv,qvE,qe,qeE]){(await getDocs(q)).forEach(d=>opts.set(d.id,d.id));}
+      if(uid===ADMIN_UID){(await getDocs(collection(db,'totals'))).forEach(d=>opts.set(d.id,d.id));}
+      for(const [id,label]of opts.entries()){const o=document.createElement('option');o.value=id;o.textContent=label;accountSelect.appendChild(o);}
+      accountPicker.classList.remove('hidden');selectAccount(uid);
     }
 
-    refreshAccountsBtn.onclick = ()=> loadAccessibleAccounts();
-    accountSelect.onchange = ()=> selectAccount(accountSelect.value);
+    refreshBtn.onclick=()=>loadAccessibleAccounts();
+    accountSelect.onchange=()=>selectAccount(accountSelect.value);
 
     async function selectAccount(accountId){
-      selectedAccountId = accountId;
-      if(unsubscribeTotal){ unsubscribeTotal(); unsubscribeTotal=null; }
-
-      const ref = await ensureAccountDoc(accountId);
-
-      // Realtime saldo
-      unsubscribeTotal = onSnapshot(ref, (snap)=>{
-        const d = snap.data()||{cents:0};
-        totalAmount.textContent = fmt.format((d.cents||0)/100);
-      });
-
+      selectedAccountId=accountId;if(unsubscribeTotal){unsubscribeTotal();unsubscribeTotal=null;}
+      const ref=await ensureAccountDoc(accountId);
+      unsubscribeTotal=onSnapshot(ref,s=>{const d=s.data()||{cents:0};totalAmount.textContent=fmt.format((d.cents||0)/100);});
       totalSection.classList.remove('hidden');
-
-      // Editor rechten: admin of in editors[] van geselecteerde rekening of eigenaar
-      let canEdit = (currentUser.uid === ADMIN_UID) || (currentUser.uid === accountId);
-      try{
-        const s = await getDoc(ref);
-        const d = s.data();
-        if(Array.isArray(d.editors) && d.editors.includes(currentUser.uid)) canEdit = true;
-      }catch{}
-      editorControls.classList.toggle('hidden', !canEdit);
+      let canEdit=(currentUser.uid===ADMIN_UID)||(currentUser.uid===accountId);
+      const s=await getDoc(ref);const d=s.data();
+      if(Array.isArray(d.editors)&&d.editors.includes(currentUser.uid))canEdit=true;
+      if(Array.isArray(d.editorEmails)&&d.editorEmails.includes(currentUser.email))canEdit=true;
+      editorControls.classList.toggle('hidden',!canEdit);
     }
 
-    // Bedrag toevoegen/resetten op geselecteerde rekening
-    el('add').onclick = async ()=>{
-      if(!selectedAccountId) return;
-      const centsToAdd = parseEuro(amountInput.value);
-      if(centsToAdd===null) return setStatus('Voer een geldig bedrag in (bijv. 12,34)');
-      try{
-        await runTransaction(db, async (tx)=>{
-          const r = doc(db,'totals',selectedAccountId);
-          const s = await tx.get(r);
-          const cur = s.exists()? (s.data().cents||0) : 0;
-          tx.set(r, { cents: cur + centsToAdd }, { merge:true });
-        });
-        amountInput.value=''; setStatus('Toegevoegd.');
-      }catch(e){ setStatus('Kon niet toevoegen: '+e.message); }
-    };
+    el('add').onclick=async()=>{if(!selectedAccountId)return;const cents=parseEuro(amountInput.value);if(cents===null)return setStatus('Voer geldig bedrag in');await runTransaction(db,async(tx)=>{const r=doc(db,'totals',selectedAccountId);const s=await tx.get(r);const cur=s.exists()?s.data().cents||0:0;tx.set(r,{cents:cur+cents},{merge:true});});amountInput.value='';setStatus('Toegevoegd.');};
+    el('reset').onclick=async()=>{if(!selectedAccountId)return;await setDoc(doc(db,'totals',selectedAccountId),{cents:0},{merge:true});setStatus('Totaal gereset.');};
 
-    el('reset').onclick = async ()=>{
-      if(!selectedAccountId) return;
-      try{
-        await setDoc(doc(db,'totals',selectedAccountId), { cents: 0 }, { merge:true });
-        setStatus('Totaal gereset.');
-      }catch(e){ setStatus('Kon niet resetten: '+e.message); }
-    };
-
-    // ——— Admin beheer per rekening ———
-    createAccountDocBtn.onclick = async ()=>{
-      const acc = adminAccountUid.value.trim(); if(!acc) return alert('Vul een rekening-ID (UID) in');
-      await ensureAccountDoc(acc);
-      await loadRights(acc);
-      alert('Rekening aangemaakt/geïnitialiseerd');
-    };
-
-    addViewerBtn.onclick = async ()=>{
-      const acc = adminAccountUid.value.trim(); const v = viewerUid.value.trim();
-      if(!acc||!v) return alert('Vul rekening-ID en viewer UID in');
-      await updateDoc(await ensureAccountDoc(acc), { viewers: arrayUnion(v) });
-      viewerUid.value=''; await loadRights(acc);
-    };
-
-    addEditorBtn.onclick = async ()=>{
-      const acc = adminAccountUid.value.trim(); const e = editorUid.value.trim();
-      if(!acc||!e) return alert('Vul rekening-ID en editor UID in');
-      await updateDoc(await ensureAccountDoc(acc), { editors: arrayUnion(e) });
-      editorUid.value=''; await loadRights(acc);
-    };
-
-    removeAccessBtn.onclick = async ()=>{
-      const acc = adminAccountUid.value.trim(); const u = removeUid.value.trim();
-      if(!acc||!u) return alert('Vul rekening-ID en te verwijderen UID in');
-      await updateDoc(await ensureAccountDoc(acc), { viewers: arrayRemove(u), editors: arrayRemove(u) });
-      removeUid.value=''; await loadRights(acc);
-    };
+    // --- Admin beheer ---
+    createAccBtn.onclick=async()=>{const acc=adminAccountUid.value.trim();if(!acc)return alert('Vul rekening-ID in');await ensureAccountDoc(acc);await loadRights(acc);};
+    addViewerBtn.onclick=async()=>{const acc=adminAccountUid.value.trim();const v=viewerUid.value.trim();if(!acc||!v)return alert('Vul rekening-ID en viewer in');const field=v.includes('@')?'viewerEmails':'viewers';await updateDoc(await ensureAccountDoc(acc),{[field]:arrayUnion(v)});viewerUid.value='';await loadRights(acc);};
+    addEditorBtn.onclick=async()=>{const acc=adminAccountUid.value.trim();const e=editorUid.value.trim();if(!acc||!e)return alert('Vul rekening-ID en editor in');const field=e.includes('@')?'editorEmails':'editors';await updateDoc(await ensureAccountDoc(acc),{[field]:arrayUnion(e)});editorUid.value='';await loadRights(acc);};
+    removeAccessBtn.onclick=async()=>{const acc=adminAccountUid.value.trim();const u=removeUid.value.trim();if(!acc||!u)return alert('Vul rekening-ID en UID/e-mail in');await updateDoc(await ensureAccountDoc(acc),{viewers:arrayRemove(u),editors:arrayRemove(u),viewerEmails:arrayRemove(u),editorEmails:arrayRemove(u)});removeUid.value='';await loadRights(acc);};
 
     async function loadRights(acc){
-      rightsAccount.textContent = acc||'—'; rightsList.innerHTML='';
-      if(!acc) return;
-      const s = await getDoc(doc(db,'totals',acc));
-      if(!s.exists()){ rightsList.textContent='(Rekening bestaat nog niet)'; return; }
-      const d = s.data();
-      const viewers = d.viewers||[]; const editors = d.editors||[];
-      const block = document.createElement('div');
-      block.innerHTML = `<div class="chip">Viewers (${viewers.length})</div><div>${viewers.map(v=>`<code>${v}</code>`).join(' ')||'—'}</div>
-                         <div class="chip" style="margin-top:8px">Editors (${editors.length})</div><div>${editors.map(v=>`<code>${v}</code>`).join(' ')||'—'}</div>`;
-      rightsList.appendChild(block);
+      rightsAccount.textContent=acc||'—';rightsList.innerHTML='';if(!acc)return;
+      const s=await getDoc(doc(db,'totals',acc));if(!s.exists()){rightsList.textContent='(Rekening bestaat nog niet)';return;}
+      const d=s.data();const make=(name,list)=>(`<div class=\"chip\">${name} (${list.length})</div><div>${list.map(v=>`<code>${v}</code>`).join(' ')||'—'}</div>`);
+      rightsList.innerHTML=make('Viewers',d.viewers||[]) + make('ViewerEmails',d.viewerEmails||[]) + make('Editors',d.editors||[]) + make('EditorEmails',d.editorEmails||[]);
     }
-
   </script>
 </body>
 </html>
