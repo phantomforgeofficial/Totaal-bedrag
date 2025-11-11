@@ -3,10 +3,11 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Mijn Totaal</title>
+  <title>Login om totaal bedrag te zien</title>
   <style>
     :root{--bg:#0b0f19;--card:#121826;--ink:#e7ecf3;--muted:#9aa8b4;--accent:#5b9dff;--good:#18b26b;--warn:#f5a524;--err:#f04438}
-    *{box-sizing:border-box} body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Inter,Arial;background:linear-gradient(180deg,#0b0f19,#0e1424 30%,#0b0f19);color:var(--ink);min-height:100svh;display:flex;align-items:center;justify-content:center;padding:24px}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Inter,Arial;background:linear-gradient(180deg,#0b0f19,#0e1424 30%,#0b0f19);color:var(--ink);min-height:100svh;display:flex;align-items:center;justify-content:center;padding:24px;position:relative}
     .card{width:100%;max-width:560px;background:var(--card);border:1px solid rgba(255,255,255,.06);border-radius:20px;box-shadow:0 20px 50px rgba(0,0,0,.35);padding:22px}
     h1{font-size:22px;margin:0 0 8px} p{color:var(--muted);margin:0 0 18px}
     .total{display:flex;align-items:baseline;gap:10px;margin:10px 0 14px}
@@ -24,22 +25,26 @@
     .status{min-height:22px;color:var(--muted);font-size:14px}
     .hidden{display:none !important}
     .admin-only{border:1px dashed rgba(255,255,255,.15);padding:12px;border-radius:12px}
+    #userInfo{position:absolute;top:16px;right:20px;display:flex;gap:10px;align-items:center}
   </style>
 </head>
 <body>
-  <div class="card">
-    <h1>Mijn Totaal</h1>
-    <p>Vul een bedrag in. Alleen jij kunt het totaal wijzigen; iedereen kan het totaal bekijken.</p>
+  <div id="userInfo" class="hidden">
+    <div class="chip" id="who"></div>
+    <button id="signOut" class="ghost">Uitloggen</button>
+  </div>
 
-    <div class="total">
+  <div class="card">
+    <h1 id="pageTitle">Login om totaal bedrag te zien</h1>
+    <p id="adminText" class="hidden">Vul een bedrag in. Alleen jij kunt het totaal wijzigen; iedereen kan het totaal bekijken.</p>
+
+    <div class="total hidden" id="totalSection">
       <div class="chip">Huidig totaal</div>
       <div class="amount" id="totalAmount">—</div>
     </div>
 
-    <div id="authRow" class="row">
+    <div id="loginSection" class="row">
       <button id="signIn" class="ghost">Inloggen met Google</button>
-      <button id="signOut" class="ghost hidden">Uitloggen</button>
-      <div class="chip" id="who">Niet ingelogd</div>
     </div>
 
     <div class="divider"></div>
@@ -61,7 +66,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
     import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
-    import { getFirestore, doc, getDoc, onSnapshot, runTransaction, setDoc } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
+    import { getFirestore, doc, onSnapshot, runTransaction, setDoc } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyBAu9cAg4BDojNfNSo-8zW3_XcEe1z89Lw",
@@ -105,6 +110,11 @@
     const signOutBtn = el('signOut');
     const who = el('who');
     const adminPanel = el('adminPanel');
+    const adminText = el('adminText');
+    const totalSection = el('totalSection');
+    const pageTitle = el('pageTitle');
+    const userInfo = el('userInfo');
+    const loginSection = el('loginSection');
 
     signInBtn.addEventListener('click', async ()=>{
       try{
@@ -117,21 +127,25 @@
 
     onAuthStateChanged(auth, async (user)=>{
       if(user){
-        console.log('✅ Ingelogd als', user.email, 'UID:', user.uid);
         who.textContent = user.email || user.uid;
-        signInBtn.classList.add('hidden');
-        signOutBtn.classList.remove('hidden');
+        loginSection.classList.add('hidden');
+        userInfo.classList.remove('hidden');
+        totalSection.classList.remove('hidden');
+        pageTitle.textContent = 'Totaal Bedrag';
         if(user.uid === ADMIN_UID){
           adminPanel.classList.remove('hidden');
+          adminText.classList.remove('hidden');
         } else {
           adminPanel.classList.add('hidden');
+          adminText.classList.add('hidden');
         }
       } else {
-        console.log('ℹ️ Niet ingelogd');
-        who.textContent = 'Niet ingelogd';
-        signInBtn.classList.remove('hidden');
-        signOutBtn.classList.add('hidden');
+        userInfo.classList.add('hidden');
+        loginSection.classList.remove('hidden');
         adminPanel.classList.add('hidden');
+        adminText.classList.add('hidden');
+        totalSection.classList.add('hidden');
+        pageTitle.textContent = 'Login om totaal bedrag te zien';
       }
     });
 
