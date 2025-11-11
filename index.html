@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mijn Totaal</title>
+  <style>
+    :root{--bg:#0b0f19;--card:#121826;--ink:#e7ecf3;--muted:#9aa8b4;--accent:#5b9dff;--good:#18b26b;--warn:#f5a524;--err:#f04438}
+    *{box-sizing:border-box} body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Inter,Arial;background:linear-gradient(180deg,#0b0f19,#0e1424 30%,#0b0f19);color:var(--ink);min-height:100svh;display:flex;align-items:center;justify-content:center;padding:24px}
+    .card{width:100%;max-width:560px;background:var(--card);border:1px solid rgba(255,255,255,.06);border-radius:20px;box-shadow:0 20px 50px rgba(0,0,0,.35);padding:22px}
+    h1{font-size:22px;margin:0 0 8px} p{color:var(--muted);margin:0 0 18px}
+    .total{display:flex;align-items:baseline;gap:10px;margin:10px 0 14px}
+    .total .amount{font-weight:700;font-size:40px}
+    .chip{font-size:12px;padding:4px 8px;border:1px solid rgba(255,255,255,.12);border-radius:999px;color:var(--muted)}
+    .row{display:flex;gap:10px}
+    input[type="number"], input[type="text"]{flex:1;background:#0b1020;border:1px solid rgba(255,255,255,.1);border-radius:12px;color:var(--ink);padding:14px 14px;font-size:16px;outline:none}
+    input:focus{border-color:var(--accent);box-shadow:0 0 0 4px rgba(91,157,255,.15)}
+    button{appearance:none;border:0;border-radius:12px;padding:14px 16px;font-weight:700;font-size:16px;cursor:pointer}
+    .primary{background:var(--accent);color:#06122b}
+    .ghost{background:transparent;border:1px solid rgba(255,255,255,.12);color:var(--ink)}
+    .danger{background:transparent;border:1px solid var(--err);color:var(--err)}
+    .stack{display:flex;flex-direction:column;gap:10px}
+    .divider{height:1px;background:rgba(255,255,255,.06);margin:14px 0}
+    .status{min-height:22px;color:var(--muted);font-size:14px}
+    .hidden{display:none !important}
+    .admin-only{border:1px dashed rgba(255,255,255,.15);padding:12px;border-radius:12px}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Mijn Totaal</h1>
+    <p>Vul een bedrag in. Alleen jij kunt het totaal wijzigen; iedereen kan het totaal bekijken.</p>
+
+    <div class="total">
+      <div class="chip">Huidig totaal</div>
+      <div class="amount" id="totalAmount">—</div>
+    </div>
+
+    <div id="authRow" class="row">
+      <button id="signIn" class="ghost">Inloggen met Google</button>
+      <button id="signOut" class="ghost hidden">Uitloggen</button>
+      <div class="chip" id="who">Niet ingelogd</div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div id="adminPanel" class="stack admin-only hidden">
+      <label for="amountInput">Bedrag toevoegen (bijv. 12,34)</label>
+      <div class="row">
+        <input id="amountInput" type="text" inputmode="decimal" placeholder="0,00" />
+        <button id="addBtn" class="primary">Toevoegen</button>
+      </div>
+      <div class="row">
+        <button id="resetBtn" class="danger">Totaal resetten naar 0</button>
+      </div>
+    </div>
+
+    <div class="status" id="status"></div>
+  </div>
+
+  <script type="module">
+    // ---- 1) VUL JOUW FIREBASE CONFIG IN ----
+    // Maak een Firebase-project aan op https://console.firebase.google.com
+    // Schakel Authentication (Google) en Firestore Database in.
+    // Vervang onderstaande config door jouw projectconfig.
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+      projectId: "YOUR_PROJECT_ID",
+      appId: "YOUR_APP_ID",
+    };
+
+    // ---- 2) ZET HIER JE EIGEN UID ALS ADMIN ----
+    // Na het eerste inloggen kun je je UID uit de console halen (of in de Firestore Rules gebruiken).
+    const ADMIN_UID = "YOUR_UID";
+
+    // ---- Firebase SDK imports ----
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js";
+    import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js";
+    import { getFirestore, doc, getDoc, onSnapshot, runTransaction, setDoc } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js";
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const el = (id)=>document.getElementById(id);
+    const fmt = new Intl.NumberFormat('nl-NL', { style:'currency', currency:'EUR' });
+
+    const totalRef = doc(db, 'totals', 'main');
+
+    // Realtime weergave van het totaal (iedereen mag lezen)
+    onSnapshot(totalRef, snap => {
+      const data = snap.data();
+      const cents = data?.cents ?? 0;
+      el('totalAmount').textContent = fmt.format(cents/100);
+    });
+
+    function setStatus(msg, type='info'){
+      el('status').textContent = msg || '';
+    }
+
+    function parseEuro(input){
+      // accepteert 1.234,56 of 1234,56 of 12, of 12.34 (we vervangen komma met punt indien nodig)
+      const s = String(input).trim().replace(/\s+/g,'');
+      if(!s) return null;
+      // verwijder duizendt. punten en normaliseer komma -> punt
+      const norm = s.replace(/\./g,'').replace(',', '.');
+      const val = Number(norm);
+      if(!isFinite(val)) return null;
+      // Afronden naar centen
+      return Math.round(val * 100);
+    }
+
+    // Auth UI
+    const signInBtn = el('signIn');
+    const signOutBtn = el('signOut');
+    const who = el('who');
+    const adminPanel = el('adminPanel');
+
+    signInBtn.addEventListener('click', async ()=>{
+      try{
+        const provider = new GoogleAuthProvider();
+        await signInWithPopup(auth, provider);
+      }catch(e){ setStatus('Inloggen mislukt: ' + e.message); }
+    });
+
+    signOutBtn.addEventListener('click', ()=> signOut(auth));
+
+    onAuthStateChanged(auth, async (user)=>{
+      if(user){
+        who.textContent = user.email || user.uid;
+        signInBtn.classList.add('hidden');
+        signOutBtn.classList.remove('hidden');
+        // Alleen admin ziet de knoppen om te wijzigen
+        if(user.uid === ADMIN_UID){
+          adminPanel.classList.remove('hidden');
+        } else {
+          adminPanel.classList.add('hidden');
+        }
+      } else {
+        who.textContent = 'Niet ingelogd';
+        signInBtn.classList.remove('hidden');
+        signOutBtn.classList.add('hidden');
+        adminPanel.classList.add('hidden');
+      }
+    });
+
+    // Totaal verhogen via transactie (atomic, geen race conditions)
+    el('addBtn').addEventListener('click', async ()=>{
+      setStatus('');
+      const centsToAdd = parseEuro(el('amountInput').value);
+      if(centsToAdd === null){ setStatus('Voer een geldig bedrag in, bijv. 12,34'); return; }
+      try{
+        await runTransaction(db, async (tx)=>{
+          const snap = await tx.get(totalRef);
+          const current = snap.exists() ? (snap.data().cents||0) : 0;
+          tx.set(totalRef, { cents: current + centsToAdd }, { merge:true });
+        });
+        el('amountInput').value='';
+        setStatus('Toegevoegd.');
+      }catch(e){ setStatus('Kon niet toevoegen: ' + e.message); }
+    });
+
+    // (Optioneel) reset naar 0 — blijft door Firestore Rules beschermd
+    el('resetBtn').addEventListener('click', async ()=>{
+      try{
+        await setDoc(totalRef, { cents: 0 }, { merge:true });
+        setStatus('Totaal gereset.');
+      }catch(e){ setStatus('Kon niet resetten: ' + e.message); }
+    });
+  </script>
+</body>
+</html>
